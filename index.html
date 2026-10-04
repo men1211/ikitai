@@ -39,6 +39,11 @@ svg{width:100%;height:auto;background:var(--card);border:1px solid var(--line);b
 .empty{text-align:center;color:var(--sub);padding:28px 8px}
 #lmap{height:62vh;border-radius:10px;border:1px solid var(--line)}
 .geo button{display:block;width:100%;text-align:left;font:inherit;font-size:14px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px;margin:4px 0}
+.box h2{font-size:16px;margin:0 0 2px}
+.row .b.fix{flex:0 0 auto}
+details summary{font-weight:700;font-size:16px;cursor:pointer}
+.req{display:inline-block;font-size:11px;font-weight:700;background:var(--pin);color:#fff;border-radius:4px;padding:0 6px;margin-right:6px;vertical-align:1px}
+.intro{font-size:14px;color:var(--sub);margin:0 0 12px}
 </style>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -49,41 +54,40 @@ svg{width:100%;height:auto;background:var(--card);border:1px solid var(--line);b
 <h1>📍 いきたいリスト</h1>
 
 <section id="s-add" class="on">
+  <p class="intro">①〜④のどれか<b>1つ</b>だけでOKです。<span class="req">必須</span>の付いた欄だけ入力してください。他は任意です。追加した場所は、自動で地図に載ります。</p>
   <div class="box">
-    <label class="t">貼り付けて追加(1行に1件)</label>
-    <textarea id="paste" placeholder="GoogleマップのURL&#10;店名, 住所&#10;店名, 35.68, 139.76&#10;InstagramなどのURL"></textarea>
-    <div class="row"><button class="b" id="go">解析して追加</button><button class="b g" id="clr">クリア</button></div>
-    <div id="msg"></div>
-    <small>GoogleマップのURLは店名と座標を読み取ります。短縮URL(maps.app.goo.gl)とSNSのURLは、リンクだけ保存されます。</small>
-  </div>
-  <div class="box">
-    <label class="t">1件ずつ入力</label>
-    <input type="text" id="f-name" placeholder="場所の名前">
-    <input type="text" id="f-addr" placeholder="住所(任意)">
-    <div class="row"><input type="text" id="f-lat" placeholder="緯度(任意)" inputmode="decimal"><input type="text" id="f-lng" placeholder="経度(任意)" inputmode="decimal"></div>
-    <input type="text" id="f-tag" placeholder="タグ(例: カフェ、京都)">
-    <input type="text" id="f-memo" placeholder="メモ">
-    <div class="row"><button class="b g" id="geo">座標を検索</button><button class="b" id="add1">追加</button></div>
+    <h2>① 名前や住所で探して追加</h2>
+    <small><span class="req">必須</span>お店や場所の名前、住所。例: 清水寺 / 渋谷 カフェ</small>
+    <div class="row"><input type="search" id="sq" placeholder="お店の名前・住所"><button class="b fix" id="sgo">検索</button></div>
     <div id="geores" class="geo"></div>
   </div>
   <div class="box">
-    <label class="t">スクショから読み取り(OCR)</label>
-    <input type="file" id="img" accept="image/*">
-    <div class="sub" id="ocrst"></div>
-    <small>読み取った文字は上の入力欄に入ります。店名の行だけ残して「解析して追加」を押してください。</small>
+    <h2>② リンクを貼って追加</h2>
+    <small><span class="req">必須</span>GoogleマップやInstagramなどのリンク。</small>
+    <div class="row"><input type="text" id="lk" placeholder="https://..."><button class="b fix" id="lkgo">追加</button></div>
   </div>
   <div class="box">
-    <label class="t">ファイルから取り込み(CSV / JSON)</label>
-    <input type="file" id="file" accept=".csv,.json,.txt">
-    <small>列は「名前, 住所, 緯度, 経度, タグ, メモ」の順です。</small>
+    <h2>③ スクショから追加</h2>
+    <small><span class="req">必須</span>スクショ画像。文字を読み取って④の入力欄に入れます。</small>
+    <input type="file" id="img" accept="image/*">
+    <div class="sub" id="ocrst"></div>
   </div>
+  <details id="bulk" class="box">
+    <summary>④ まとめて追加(複数行・ファイル)</summary>
+    <small><span class="req">必須</span>1行に1件。「店名」または「店名, 住所」の形で書きます。</small>
+    <textarea id="paste" placeholder="清水寺&#10;スタバ 渋谷, 東京都渋谷区"></textarea>
+    <div class="row"><button class="b" id="go">追加</button><button class="b g" id="clr">クリア</button></div>
+    <small>(任意)ファイルから取り込む場合はCSV/JSON:</small>
+    <input type="file" id="file" accept=".csv,.json,.txt">
+  </details>
+  <div id="msg"></div>
 </section>
 
 <section id="s-list">
   <input type="search" id="q" placeholder="名前・住所・タグで絞り込み">
   <div id="list"></div>
   <div class="box">
-    <button class="b g" id="geoall">座標なしの場所を一括検索</button>
+    <button class="b g" id="geoall">地図に載っていない場所をまとめて検索</button>
     <div class="sub" id="geost"></div>
   </div>
   <div class="box">
@@ -152,15 +156,9 @@ function push(o){
 
 $('go').onclick=function(){
   var n=0;$('paste').value.split(/\n/).forEach(function(l){if(push(fromLine(l)))n++});
-  save();render();say(n?n+'件を追加しました。リストで確認できます。':'追加できる行がありませんでした。');if(n)$('paste').value='';
+  save();render();say(n?n+'件を追加しました。地図の位置を自動で調べます...':'追加できる行がありませんでした。');if(n){$('paste').value='';runGeo()}
 };
 $('clr').onclick=function(){$('paste').value='';say('')};
-$('add1').onclick=function(){
-  var o={name:$('f-name').value.trim(),addr:$('f-addr').value.trim(),lat:num($('f-lat').value),lng:num($('f-lng').value),url:'',tag:$('f-tag').value.trim(),memo:$('f-memo').value.trim()};
-  if(!o.name){say('場所の名前を入力してください。');return}
-  push(o);save();render();say('「'+o.name+'」を追加しました。');
-  ['name','addr','lat','lng','tag','memo'].forEach(function(k){$('f-'+k).value=''});
-};
 $('file').onchange=function(e){
   var f=e.target.files[0];if(!f)return;var r=new FileReader();
   r.onload=function(){
@@ -211,8 +209,9 @@ $('list').onclick=function(e){
     var a=prompt('住所',p.addr);if(a!==null)p.addr=a.trim();
     var t=prompt('タグ',p.tag);if(t!==null)p.tag=t.trim();
     var m=prompt('メモ',p.memo);if(m!==null)p.memo=m.trim();
+    if(p.memo==='名前と場所を後で入力')p.memo='';
   }
-  save();render();
+  save();render();if(b.dataset.a==='edit')runGeo();
 };
 
 /* --- export --- */
@@ -236,7 +235,7 @@ $('cp').onclick=function(){
 var map=null,layer=null;
 function drawMap(){
   if(typeof L==='undefined'){$('mapnote').textContent='地図ライブラリを読み込めませんでした。通信環境を確認してください。';return}
-  if(!map){map=L.map('lmap').setView([35.68,139.76],5);var gsi=L.tileLayer('https://cyberjapan.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',{maxZoom:18,attribution:'地理院タイル'}),osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap contributors'});gsi.addTo(map);L.control.layers({'地理院地図':gsi,'OpenStreetMap':osm}).addTo(map);layer=L.layerGroup().addTo(map)}
+  if(!map){map=L.map('lmap').setView([35.68,139.76],5);var cv=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap contributors © CARTO'}),gsi=L.tileLayer('https://cyberjapan.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',{maxZoom:18,detectRetina:true,attribution:'地理院タイル'}),sat=L.tileLayer('https://cyberjapan.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',{maxZoom:18,attribution:'地理院タイル'}),osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,detectRetina:true,attribution:'© OpenStreetMap contributors'});cv.addTo(map);L.control.layers({'見やすい(標準)':cv,'地理院地図':gsi,'航空写真':sat,'OpenStreetMap':osm}).addTo(map);layer=L.layerGroup().addTo(map)}
   layer.clearLayers();
   var pts=P.filter(function(p){return p.lat!=null&&p.lng!=null});
   $('mapnote').textContent=pts.length?'座標のある'+pts.length+'件を表示中。点をタップすると詳細が出ます。':'座標のある場所がありません。「座標を検索」か、リストの一括検索を使ってください。';
@@ -249,25 +248,40 @@ function drawMap(){
 
 /* --- geocoding (Nominatim) --- */
 function geocode(q){return fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&accept-language=ja&q='+encodeURIComponent(q)).then(function(r){return r.json()})}
-$('geo').onclick=function(){
-  var q=($('f-name').value+' '+$('f-addr').value).trim();if(!q){say('名前か住所を入力してください。');return}
+function doSearch(){
+  var q=$('sq').value.trim();if(!q){say('名前か住所を入力してください。');return}
   $('geores').innerHTML='<div class="sub">検索中...</div>';
   geocode(q).then(function(r){
-    $('geores').innerHTML=r.length?r.map(function(x,i){return '<button data-i="'+i+'">'+esc(x.display_name)+'</button>'}).join(''):'<div class="sub">見つかりませんでした。住所を詳しく入れてみてください。</div>';
+    $('geores').innerHTML=r.length?'<div class="sub">追加する場所をタップしてください。</div>'+r.map(function(x,i){return '<button data-i="'+i+'"><b>'+esc(x.name||x.display_name.split(',')[0])+'</b><br><span class="sub">'+esc(x.display_name)+'</span></button>'}).join(''):'<div class="sub">見つかりませんでした。別の言葉や、住所で試してください。</div>';
     $('geores').onclick=function(e){var b=e.target.closest('button');if(!b)return;var x=r[b.dataset.i];
-      $('f-lat').value=(+x.lat).toFixed(6);$('f-lng').value=(+x.lon).toFixed(6);if(!$('f-addr').value)$('f-addr').value=x.display_name;$('geores').innerHTML='<div class="sub">座標を入力しました。「追加」を押してください。</div>'};
+      var ok=push({name:x.name||x.display_name.split(',')[0],addr:x.display_name,lat:+x.lat,lng:+x.lon,url:'',tag:'',memo:''});
+      save();render();$('geores').innerHTML='';$('sq').value='';say(ok?'追加しました。地図タブで確認できます。':'すでに追加されています。')};
   }).catch(function(){$('geores').innerHTML='<div class="sub">検索に失敗しました。通信環境を確認してください。</div>'});
+}
+$('sgo').onclick=doSearch;
+$('sq').onkeydown=function(e){if(e.key==='Enter')doSearch()};
+$('lkgo').onclick=function(){
+  var u=$('lk').value.trim();if(!/^https?:\/\//i.test(u)){say('「https://」で始まるリンクを貼ってください。');return}
+  var o=fromUrl(u),ok=push(o);save();render();$('lk').value='';
+  say(ok?(o.lat!=null?'追加しました。地図タブで確認できます。':(o.memo?'リンクを保存しました。「リスト」の編集で店名を入れると、地図に載ります。':'追加しました。地図の位置を自動で調べます...')):'すでに追加されています。');if(ok)runGeo();
 };
-$('geoall').onclick=async function(){
-  var T=P.filter(function(p){return p.lat==null}),ok=0;
-  if(!T.length){$('geost').textContent='座標なしの場所はありません。';return}
+var geoBusy=false;
+async function runGeo(){
+  if(geoBusy)return;
+  var T=P.filter(function(p){return p.lat==null&&p.memo!=='名前と場所を後で入力'}),ok=0;
+  if(!T.length){$('geost').textContent='地図に載っていない場所はありません。';return}
+  geoBusy=true;
   for(var i=0;i<T.length;i++){
-    $('geost').textContent='検索中 '+(i+1)+'/'+T.length+' ...';
+    $('geost').textContent='地図の位置を検索中 '+(i+1)+'/'+T.length+' ...';
     try{var r=await geocode((T[i].name+' '+T[i].addr).trim());if(r[0]){T[i].lat=+r[0].lat;T[i].lng=+r[0].lon;if(!T[i].addr)T[i].addr=r[0].display_name;ok++}}catch(e){}
+    save();render();
     await new Promise(function(res){setTimeout(res,1100)});
   }
-  save();render();$('geost').textContent=ok+'/'+T.length+'件の座標を取得しました。違う場所は「編集」で直してください。';
-};
+  geoBusy=false;
+  var m=ok+'/'+T.length+'件を地図に載せました。'+(ok<T.length?'見つからなかった場所は、リストの「編集」で名前や住所を直してください。':'');
+  $('geost').textContent=m;say(m);
+}
+$('geoall').onclick=runGeo;
 
 /* --- OCR (Tesseract.js) --- */
 $('img').onchange=function(e){
@@ -277,7 +291,7 @@ $('img').onchange=function(e){
   Tesseract.recognize(f,'jpn+eng',{logger:function(m){if(m.status==='recognizing text')$('ocrst').textContent='読み取り中 '+Math.round(m.progress*100)+'%'}}).then(function(r){
     var t=r.data.text.replace(/([^\x00-\x7f])[ \t]+(?=[^\x00-\x7f])/g,'$1').split(/\n/).map(function(l){return l.trim()}).filter(Boolean).join('\n');
     $('paste').value=($('paste').value?$('paste').value+'\n':'')+t;
-    $('ocrst').textContent='完了。入力欄の内容を整えてから「解析して追加」を押してください。';
+    $('bulk').open=true;$('ocrst').textContent='完了。④の入力欄で、店名の行だけ残して「追加」を押してください。';
     window.scrollTo(0,0);
   }).catch(function(){$('ocrst').textContent='読み取りに失敗しました。'});
 };
