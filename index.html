@@ -14,11 +14,11 @@ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:en
 :root[data-theme="dark"]{--bg:#0f1a22;--card:#17262f;--ink:#e6eef3;--sub:#8ea2b0;--line:#263945;--acc:#4cc2e8;--pin:#ff7a70;--ok:#5fcf93}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
-main{max-width:640px;margin:0 auto;padding:16px 14px 90px}
+main{max-width:640px;margin:0 auto;padding:76px 14px 40px}
 h1{font-size:22px;margin:4px 0 12px;letter-spacing:.02em}
-nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
-nav button{flex:1;border:0;background:none;color:var(--sub);padding:12px 0;font-size:14px;font-weight:600}
-nav button.on{color:var(--acc);box-shadow:inset 0 3px 0 var(--acc)}
+nav{position:fixed;z-index:10;top:calc(env(safe-area-inset-top,0px) + 8px);left:10px;right:10px;max-width:420px;margin:0 auto;display:flex;background:var(--card);border-radius:12px;box-shadow:0 2px 10px #0003;overflow:hidden}
+nav button{flex:1;border:0;background:none;color:var(--sub);padding:11px 0;font-size:14px;font-weight:700}
+nav button.on{color:var(--acc);box-shadow:inset 0 -3px 0 var(--acc)}
 section{display:none}section.on{display:block}
 .box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
 textarea,input[type=text],input[type=search]{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:4px 0}
@@ -37,7 +37,12 @@ label.t{font-size:13px;color:var(--sub)}
 #msg{min-height:22px;font-size:14px;color:var(--ok)}
 svg{width:100%;height:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;display:block}
 .empty{text-align:center;color:var(--sub);padding:28px 8px}
-#lmap{height:62vh;border-radius:10px;border:1px solid var(--line)}
+#lmap{position:absolute;inset:0}
+#s-map.on{position:fixed;inset:0;z-index:1}
+#mapnote{position:absolute;left:10px;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 10px);margin:0;padding:6px 10px;border-radius:8px;background:var(--card);color:var(--sub);font-size:13px;box-shadow:0 1px 6px #0003;pointer-events:none;width:fit-content;max-width:calc(100% - 70px)}
+.dot{width:20px;height:20px;border-radius:50%;border:3px solid #fff;box-shadow:0 1px 5px #0006;cursor:pointer}
+.maplibregl-popup-content{color:#14222e;font:14px/1.5 -apple-system,"Hiragino Sans",sans-serif;padding:10px 12px}
+.maplibregl-popup-content a{color:#0a7ea4}
 .geo button{display:block;width:100%;text-align:left;font:inherit;font-size:14px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px;margin:4px 0}
 .box h2{font-size:16px;margin:0 0 2px}
 .row .b.fix{flex:0 0 auto}
@@ -45,15 +50,14 @@ details summary{font-weight:700;font-size:16px;cursor:pointer}
 .req{display:inline-block;font-size:11px;font-weight:700;background:var(--pin);color:#fff;border-radius:4px;padding:0 6px;margin-right:6px;vertical-align:1px}
 .intro{font-size:14px;color:var(--sub);margin:0 0 12px}
 </style>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
 <main>
-<h1>📍 いきたいリスト</h1>
 
-<section id="s-add" class="on">
+<section id="s-add">
   <p class="intro">①〜④のどれか<b>1つ</b>だけでOKです。<span class="req">必須</span>の付いた欄だけ入力してください。他は任意です。追加した場所は、自動で地図に載ります。</p>
   <div class="box">
     <h2>① 名前や住所で探して追加</h2>
@@ -98,17 +102,16 @@ details summary{font-weight:700;font-size:16px;cursor:pointer}
   </div>
 </section>
 
-<section id="s-map">
+<section id="s-map" class="on">
   <div id="lmap"></div>
-  <p class="sub" id="mapnote"></p>
-  <div id="pick" class="box" style="display:none"></div>
+  <p id="mapnote"></p>
 </section>
 </main>
 
 <nav>
-  <button data-t="add" class="on">追加</button>
+  <button data-t="map" class="on">地図</button>
+  <button data-t="add">追加</button>
   <button data-t="list">リスト <span id="cnt"></span></button>
-  <button data-t="map">地図</button>
 </nav>
 
 <script>
@@ -231,19 +234,28 @@ $('cp').onclick=function(){
   setTimeout(function(){$('cp').textContent='コピー'},1800);
 };
 
-/* --- map (Leaflet + OpenStreetMap) --- */
-var map=null,layer=null;
+/* --- map (MapLibre + OpenFreeMap) --- */
+var map=null,markers=[];
 function drawMap(){
-  if(typeof L==='undefined'){$('mapnote').textContent='地図ライブラリを読み込めませんでした。通信環境を確認してください。';return}
-  if(!map){map=L.map('lmap').setView([35.68,139.76],5);var cv=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap contributors © CARTO'}),gsi=L.tileLayer('https://cyberjapan.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',{maxZoom:18,detectRetina:true,attribution:'地理院タイル'}),sat=L.tileLayer('https://cyberjapan.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',{maxZoom:18,attribution:'地理院タイル'}),osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,detectRetina:true,attribution:'© OpenStreetMap contributors'});cv.addTo(map);L.control.layers({'見やすい(標準)':cv,'地理院地図':gsi,'航空写真':sat,'OpenStreetMap':osm}).addTo(map);layer=L.layerGroup().addTo(map)}
-  layer.clearLayers();
+  if(typeof maplibregl==='undefined'){$('mapnote').textContent='地図を読み込めませんでした。通信環境を確認してください。';return}
+  if(!map){
+    map=new maplibregl.Map({container:'lmap',style:'https://tiles.openfreemap.org/styles/liberty',center:[139.76,35.68],zoom:4,attributionControl:{compact:true}});
+    map.addControl(new maplibregl.NavigationControl({showCompass:false}),'bottom-right');
+    map.addControl(new maplibregl.GeolocateControl({positionOptions:{enableHighAccuracy:true}}),'bottom-right');
+    map.on('load',drawMap);
+    return;
+  }
+  markers.forEach(function(m){m.remove()});markers=[];
   var pts=P.filter(function(p){return p.lat!=null&&p.lng!=null});
-  $('mapnote').textContent=pts.length?'座標のある'+pts.length+'件を表示中。点をタップすると詳細が出ます。':'座標のある場所がありません。「座標を検索」か、リストの一括検索を使ってください。';
+  $('mapnote').textContent=pts.length?pts.length+'件を表示中':'まだ地図に載っている場所がありません。「追加」から登録してください。';
+  var bb=new maplibregl.LngLatBounds();
   pts.forEach(function(p){
-    L.circleMarker([p.lat,p.lng],{radius:9,color:'#fff',weight:2,fillColor:p.done?'#2f8f5b':'#d9423a',fillOpacity:1}).addTo(layer)
-     .bindPopup('<b>'+esc(p.name)+'</b><br>'+esc(p.addr)+'<br>'+links(p).map(function(l){return '<a href="'+l[1]+'" target="_blank" rel="noopener">'+l[0]+'</a>'}).join(' / '));
+    var el=document.createElement('div');el.className='dot';el.style.background=p.done?'#2f8f5b':'#d9423a';
+    var h='<b>'+esc(p.name)+'</b><br>'+(p.addr?'<span style="color:#5d6f7d">'+esc(p.addr)+'</span><br>':'')+links(p).map(function(l){return '<a href="'+l[1]+'" target="_blank" rel="noopener">'+l[0]+'</a>'}).join(' / ');
+    markers.push(new maplibregl.Marker({element:el}).setLngLat([p.lng,p.lat]).setPopup(new maplibregl.Popup({offset:14,maxWidth:'260px'}).setHTML(h)).addTo(map));
+    bb.extend([p.lng,p.lat]);
   });
-  if(pts.length)map.fitBounds(L.latLngBounds(pts.map(function(p){return[p.lat,p.lng]})).pad(.2),{maxZoom:15});
+  if(pts.length)map.fitBounds(bb,{padding:{top:90,bottom:70,left:50,right:50},maxZoom:15,duration:0});
 }
 
 /* --- geocoding (Nominatim) --- */
@@ -306,7 +318,7 @@ $('dl').onclick=function(){
 /* --- tabs --- */
 document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){
   document.querySelectorAll('nav button,section').forEach(function(e){e.classList.remove('on')});
-  b.classList.add('on');$('s-'+b.dataset.t).classList.add('on');window.scrollTo(0,0);if(b.dataset.t==='map'){drawMap();setTimeout(function(){map&&map.invalidateSize()},80)}
+  b.classList.add('on');$('s-'+b.dataset.t).classList.add('on');window.scrollTo(0,0);if(b.dataset.t==='map'){drawMap();setTimeout(function(){map&&map.resize()},50)}
 }});
 render();
 })();
