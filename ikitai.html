@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>いきたいリスト</title>
+<meta name="referrer" content="origin">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="いきたい">
+<style>
+:root{--bg:#eef2f5;--card:#fff;--ink:#14222e;--sub:#5d6f7d;--line:#d3dde4;--acc:#0a7ea4;--pin:#d9423a;--ok:#2f8f5b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1a22;--card:#17262f;--ink:#e6eef3;--sub:#8ea2b0;--line:#26394560;--acc:#4cc2e8;--pin:#ff7a70;--ok:#5fcf93}}
+:root[data-theme="dark"]{--bg:#0f1a22;--card:#17262f;--ink:#e6eef3;--sub:#8ea2b0;--line:#263945;--acc:#4cc2e8;--pin:#ff7a70;--ok:#5fcf93}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 -apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+main{max-width:640px;margin:0 auto;padding:16px 14px 90px}
+h1{font-size:22px;margin:4px 0 12px;letter-spacing:.02em}
+nav{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;border:0;background:none;color:var(--sub);padding:12px 0;font-size:14px;font-weight:600}
+nav button.on{color:var(--acc);box-shadow:inset 0 3px 0 var(--acc)}
+section{display:none}section.on{display:block}
+.box{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
+textarea,input[type=text],input[type=search]{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;margin:4px 0}
+textarea{min-height:110px;resize:vertical}
+.row{display:flex;gap:8px}.row>*{flex:1}
+button.b{font:inherit;font-weight:600;border:0;border-radius:8px;padding:11px 14px;background:var(--acc);color:#fff}
+button.g{background:none;color:var(--acc);border:1px solid var(--line)}
+small,.sub{color:var(--sub);font-size:13px}
+label.t{font-size:13px;color:var(--sub)}
+.it{border-left:4px solid var(--acc);padding-left:10px}
+.it.done{border-color:var(--ok);opacity:.65}
+.it b{font-size:17px}
+.tag{display:inline-block;font-size:12px;border:1px solid var(--line);border-radius:99px;padding:0 8px;margin-left:6px;color:var(--sub)}
+.acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.acts a,.acts button{font:inherit;font-size:13px;text-decoration:none;color:var(--acc);border:1px solid var(--line);background:none;border-radius:6px;padding:4px 9px}
+#msg{min-height:22px;font-size:14px;color:var(--ok)}
+svg{width:100%;height:auto;background:var(--card);border:1px solid var(--line);border-radius:10px;display:block}
+.empty{text-align:center;color:var(--sub);padding:28px 8px}
+#lmap{height:62vh;border-radius:10px;border:1px solid var(--line)}
+.geo button{display:block;width:100%;text-align:left;font:inherit;font-size:14px;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px;margin:4px 0}
+.box h2{font-size:16px;margin:0 0 2px}
+.row .b.fix{flex:0 0 auto}
+details summary{font-weight:700;font-size:16px;cursor:pointer}
+.req{display:inline-block;font-size:11px;font-weight:700;background:var(--pin);color:#fff;border-radius:4px;padding:0 6px;margin-right:6px;vertical-align:1px}
+.intro{font-size:14px;color:var(--sub);margin:0 0 12px}
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+<body>
+<main>
+<h1>📍 いきたいリスト</h1>
+
+<section id="s-add" class="on">
+  <p class="intro">①〜④のどれか<b>1つ</b>だけでOKです。<span class="req">必須</span>の付いた欄だけ入力してください。他は任意です。追加した場所は、自動で地図に載ります。</p>
+  <div class="box">
+    <h2>① 名前や住所で探して追加</h2>
+    <small><span class="req">必須</span>お店や場所の名前、住所。例: 清水寺 / 渋谷 カフェ</small>
+    <div class="row"><input type="search" id="sq" placeholder="お店の名前・住所"><button class="b fix" id="sgo">検索</button></div>
+    <div id="geores" class="geo"></div>
+  </div>
+  <div class="box">
+    <h2>② リンクを貼って追加</h2>
+    <small><span class="req">必須</span>GoogleマップやInstagramなどのリンク。</small>
+    <div class="row"><input type="text" id="lk" placeholder="https://..."><button class="b fix" id="lkgo">追加</button></div>
+  </div>
+  <div class="box">
+    <h2>③ スクショから追加</h2>
+    <small><span class="req">必須</span>スクショ画像。文字を読み取って④の入力欄に入れます。</small>
+    <input type="file" id="img" accept="image/*">
+    <div class="sub" id="ocrst"></div>
+  </div>
+  <details id="bulk" class="box">
+    <summary>④ まとめて追加(複数行・ファイル)</summary>
+    <small><span class="req">必須</span>1行に1件。「店名」または「店名, 住所」の形で書きます。</small>
+    <textarea id="paste" placeholder="清水寺&#10;スタバ 渋谷, 東京都渋谷区"></textarea>
+    <div class="row"><button class="b" id="go">追加</button><button class="b g" id="clr">クリア</button></div>
+    <small>(任意)ファイルから取り込む場合はCSV/JSON:</small>
+    <input type="file" id="file" accept=".csv,.json,.txt">
+  </details>
+  <div id="msg"></div>
+</section>
+
+<section id="s-list">
+  <input type="search" id="q" placeholder="名前・住所・タグで絞り込み">
+  <div id="list"></div>
+  <div class="box">
+    <button class="b g" id="geoall">地図に載っていない場所をまとめて検索</button>
+    <div class="sub" id="geost"></div>
+  </div>
+  <div class="box">
+    <label class="t">書き出し</label>
+    <div class="row"><button class="b g" data-ex="csv">CSV</button><button class="b g" data-ex="kml">KML</button><button class="b g" data-ex="json">JSON</button></div>
+    <textarea id="ex" readonly placeholder="形式を選ぶとここに表示されます"></textarea>
+    <div class="row"><button class="b g" id="cp">コピー</button><button class="b" id="dl">ファイル保存</button></div>
+  </div>
+</section>
+
+<section id="s-map">
+  <div id="lmap"></div>
+  <p class="sub" id="mapnote"></p>
+  <div id="pick" class="box" style="display:none"></div>
+</section>
+</main>
+
+<nav>
+  <button data-t="add" class="on">追加</button>
+  <button data-t="list">リスト <span id="cnt"></span></button>
+  <button data-t="map">地図</button>
+</nav>
+
+<script>
+(function(){
+var KEY='ikitai.v1',P=[];
+var $=function(i){return document.getElementById(i)};
+try{P=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){P=[]}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(P))}catch(e){}}
+function say(t){$('msg').textContent=t}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function num(s){var n=parseFloat(s);return isFinite(n)?n:null}
+
+/* --- parsing --- */
+function fromUrl(u){
+  var o={name:'',addr:'',lat:null,lng:null,url:u,tag:'',memo:''},m;
+  var d=u;try{d=decodeURIComponent(u)}catch(e){}
+  if(/google\.[a-z.]+\/maps|maps\.google|goo\.gl\/maps/.test(u)){
+    m=d.match(/\/place\/([^\/@?]+)/);if(m)o.name=m[1].replace(/\+/g,' ');
+    m=d.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/)||d.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/)||d.match(/[?&](?:q|query|ll|destination)=(-?\d+\.\d+),\s*(-?\d+\.\d+)/);
+    if(m){o.lat=+m[1];o.lng=+m[2]}
+    if(!o.name){m=d.match(/[?&](?:q|query)=([^&]+)/);if(m&&!/^-?\d/.test(m[1]))o.name=m[1].replace(/\+/g,' ')}
+    if(!o.name)o.name='Googleマップの場所';
+  }else{
+    try{o.name=new URL(u).hostname.replace(/^www\./,'')}catch(e){o.name='リンク'}
+    o.memo='名前と場所を後で入力'
+  }
+  return o;
+}
+function fromLine(l){
+  l=l.trim();if(!l)return null;
+  if(/^https?:\/\//i.test(l))return fromUrl(l);
+  var c=l.split(/[,\t、]/).map(function(s){return s.trim()});
+  var o={name:c[0],addr:'',lat:null,lng:null,url:'',tag:'',memo:''};
+  if(c.length>=3&&num(c[c.length-1])!==null&&num(c[c.length-2])!==null&&/\./.test(c[c.length-1])){
+    o.lat=num(c[c.length-2]);o.lng=num(c[c.length-1]);o.addr=c.slice(1,-2).join(' ')
+  }else o.addr=c.slice(1).join(' ');
+  return o;
+}
+function push(o){
+  if(!o||!o.name)return false;
+  var dup=P.some(function(p){return p.name===o.name&&(p.addr===o.addr)&&p.lat===o.lat});
+  if(dup)return false;
+  o.id=Date.now().toString(36)+Math.random().toString(36).slice(2,5);o.done=false;P.unshift(o);return true;
+}
+
+$('go').onclick=function(){
+  var n=0;$('paste').value.split(/\n/).forEach(function(l){if(push(fromLine(l)))n++});
+  save();render();say(n?n+'件を追加しました。地図の位置を自動で調べます...':'追加できる行がありませんでした。');if(n){$('paste').value='';runGeo()}
+};
+$('clr').onclick=function(){$('paste').value='';say('')};
+$('file').onchange=function(e){
+  var f=e.target.files[0];if(!f)return;var r=new FileReader();
+  r.onload=function(){
+    var t=String(r.result),n=0;
+    try{var j=JSON.parse(t);(Array.isArray(j)?j:[]).forEach(function(o){if(push({name:o.name,addr:o.addr||'',lat:o.lat,lng:o.lng,url:o.url||'',tag:o.tag||'',memo:o.memo||''}))n++})}
+    catch(x){t.split(/\r?\n/).forEach(function(l,i){
+      var c=l.split(',').map(function(s){return s.replace(/^"|"$/g,'').trim()});
+      if(i===0&&/名前|name/i.test(c[0]))return;
+      if(c[0]&&push({name:c[0],addr:c[1]||'',lat:num(c[2]),lng:num(c[3]),url:'',tag:c[4]||'',memo:c[5]||''}))n++})}
+    save();render();say(n+'件を取り込みました。');
+  };r.readAsText(f);
+};
+
+/* --- map links --- */
+function links(p){
+  var q=encodeURIComponent((p.name+' '+p.addr).trim()),has=p.lat!=null&&p.lng!=null,ll=p.lat+','+p.lng;
+  return [
+    ['Google',has?'https://www.google.com/maps/search/?api=1&query='+ll:'https://www.google.com/maps/search/?api=1&query='+q],
+    ['Apple',has?'https://maps.apple.com/?ll='+ll+'&q='+encodeURIComponent(p.name):'https://maps.apple.com/?q='+q],
+    ['Yahoo',has?'https://map.yahoo.co.jp/maps?lat='+p.lat+'&lon='+p.lng+'&z=17':'https://map.yahoo.co.jp/search?q='+q]
+  ];
+}
+
+/* --- list --- */
+function render(){
+  $('cnt').textContent=P.length?'('+P.length+')':'';
+  var q=$('q').value.trim().toLowerCase();
+  var L=P.filter(function(p){return !q||(p.name+p.addr+p.tag+p.memo).toLowerCase().indexOf(q)>-1});
+  $('list').innerHTML=L.length?L.map(function(p){
+    return '<div class="box it'+(p.done?' done':'')+'"><b>'+esc(p.name)+'</b>'+(p.tag?'<span class="tag">'+esc(p.tag)+'</span>':'')+
+    (p.addr?'<div class="sub">'+esc(p.addr)+'</div>':'')+(p.memo?'<div class="sub">'+esc(p.memo)+'</div>':'')+
+    (p.lat==null?'<div class="sub">座標なし(名前と住所で地図検索します)</div>':'')+
+    '<div class="acts">'+links(p).map(function(l){return '<a href="'+l[1]+'" target="_blank" rel="noopener">'+l[0]+'で開く</a>'}).join('')+
+    (p.url?'<a href="'+esc(p.url)+'" target="_blank" rel="noopener">元の投稿</a>':'')+
+    '<button data-a="done" data-id="'+p.id+'">'+(p.done?'未訪問に戻す':'行った')+'</button>'+
+    '<button data-a="edit" data-id="'+p.id+'">編集</button><button data-a="del" data-id="'+p.id+'">削除</button></div></div>'
+  }).join(''):'<div class="empty">'+(P.length?'該当なし':'まだ何もありません。「追加」タブから登録しましょう。')+'</div>';
+  if($('s-map').classList.contains('on'))drawMap();
+}
+$('q').oninput=render;
+$('list').onclick=function(e){
+  var b=e.target.closest('button[data-a]');if(!b)return;
+  var i=P.findIndex(function(p){return p.id===b.dataset.id}),p=P[i];if(!p)return;
+  if(b.dataset.a==='del'){if(confirm('「'+p.name+'」を削除しますか?'))P.splice(i,1)}
+  else if(b.dataset.a==='done')p.done=!p.done;
+  else{
+    var n=prompt('名前',p.name);if(n===null)return;p.name=n.trim()||p.name;
+    var a=prompt('住所',p.addr);if(a!==null)p.addr=a.trim();
+    var t=prompt('タグ',p.tag);if(t!==null)p.tag=t.trim();
+    var m=prompt('メモ',p.memo);if(m!==null)p.memo=m.trim();
+    if(p.memo==='名前と場所を後で入力')p.memo='';
+  }
+  save();render();if(b.dataset.a==='edit')runGeo();
+};
+
+/* --- export --- */
+function xe(s){return String(s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
+function csvq(s){s=String(s==null?'':s);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
+document.querySelectorAll('[data-ex]').forEach(function(b){b.onclick=function(){
+  var f=b.dataset.ex,t='';
+  if(f==='json')t=JSON.stringify(P.map(function(p){return{name:p.name,addr:p.addr,lat:p.lat,lng:p.lng,url:p.url,tag:p.tag,memo:p.memo}}),null,1);
+  else if(f==='csv')t='名前,住所,緯度,経度,タグ,メモ\n'+P.map(function(p){return[p.name,p.addr,p.lat,p.lng,p.tag,p.memo].map(csvq).join(',')}).join('\n');
+  else t='<?xml version="1.0" encoding="UTF-8"?>\n<kml xmlns="http://www.opengis.net/kml/2.2"><Document>\n'+P.filter(function(p){return p.lat!=null}).map(function(p){return'<Placemark><name>'+xe(p.name)+'</name><description>'+xe(p.addr+' '+p.memo)+'</description><Point><coordinates>'+p.lng+','+p.lat+',0</coordinates></Point></Placemark>'}).join('\n')+'\n</Document></kml>';
+  $('ex').value=t;
+}});
+$('cp').onclick=function(){
+  var t=$('ex');if(!t.value)return;t.select();
+  try{(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).then(function(){$('cp').textContent='コピーしました'},function(){document.execCommand('copy');$('cp').textContent='コピーしました'})}
+  catch(e){try{document.execCommand('copy');$('cp').textContent='コピーしました'}catch(x){}}
+  setTimeout(function(){$('cp').textContent='コピー'},1800);
+};
+
+/* --- map (Leaflet + OpenStreetMap) --- */
+var map=null,layer=null;
+function drawMap(){
+  if(typeof L==='undefined'){$('mapnote').textContent='地図ライブラリを読み込めませんでした。通信環境を確認してください。';return}
+  if(!map){map=L.map('lmap').setView([35.68,139.76],5);var cv=L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:20,attribution:'© OpenStreetMap contributors © CARTO'}),gsi=L.tileLayer('https://cyberjapan.gsi.go.jp/xyz/std/{z}/{x}/{y}.png',{maxZoom:18,detectRetina:true,attribution:'地理院タイル'}),sat=L.tileLayer('https://cyberjapan.gsi.go.jp/xyz/seamlessphoto/{z}/{x}/{y}.jpg',{maxZoom:18,attribution:'地理院タイル'}),osm=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,detectRetina:true,attribution:'© OpenStreetMap contributors'});cv.addTo(map);L.control.layers({'見やすい(標準)':cv,'地理院地図':gsi,'航空写真':sat,'OpenStreetMap':osm}).addTo(map);layer=L.layerGroup().addTo(map)}
+  layer.clearLayers();
+  var pts=P.filter(function(p){return p.lat!=null&&p.lng!=null});
+  $('mapnote').textContent=pts.length?'座標のある'+pts.length+'件を表示中。点をタップすると詳細が出ます。':'座標のある場所がありません。「座標を検索」か、リストの一括検索を使ってください。';
+  pts.forEach(function(p){
+    L.circleMarker([p.lat,p.lng],{radius:9,color:'#fff',weight:2,fillColor:p.done?'#2f8f5b':'#d9423a',fillOpacity:1}).addTo(layer)
+     .bindPopup('<b>'+esc(p.name)+'</b><br>'+esc(p.addr)+'<br>'+links(p).map(function(l){return '<a href="'+l[1]+'" target="_blank" rel="noopener">'+l[0]+'</a>'}).join(' / '));
+  });
+  if(pts.length)map.fitBounds(L.latLngBounds(pts.map(function(p){return[p.lat,p.lng]})).pad(.2),{maxZoom:15});
+}
+
+/* --- geocoding (Nominatim) --- */
+function geocode(q){return fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=5&accept-language=ja&q='+encodeURIComponent(q)).then(function(r){return r.json()})}
+function doSearch(){
+  var q=$('sq').value.trim();if(!q){say('名前か住所を入力してください。');return}
+  $('geores').innerHTML='<div class="sub">検索中...</div>';
+  geocode(q).then(function(r){
+    $('geores').innerHTML=r.length?'<div class="sub">追加する場所をタップしてください。</div>'+r.map(function(x,i){return '<button data-i="'+i+'"><b>'+esc(x.name||x.display_name.split(',')[0])+'</b><br><span class="sub">'+esc(x.display_name)+'</span></button>'}).join(''):'<div class="sub">見つかりませんでした。別の言葉や、住所で試してください。</div>';
+    $('geores').onclick=function(e){var b=e.target.closest('button');if(!b)return;var x=r[b.dataset.i];
+      var ok=push({name:x.name||x.display_name.split(',')[0],addr:x.display_name,lat:+x.lat,lng:+x.lon,url:'',tag:'',memo:''});
+      save();render();$('geores').innerHTML='';$('sq').value='';say(ok?'追加しました。地図タブで確認できます。':'すでに追加されています。')};
+  }).catch(function(){$('geores').innerHTML='<div class="sub">検索に失敗しました。通信環境を確認してください。</div>'});
+}
+$('sgo').onclick=doSearch;
+$('sq').onkeydown=function(e){if(e.key==='Enter')doSearch()};
+$('lkgo').onclick=function(){
+  var u=$('lk').value.trim();if(!/^https?:\/\//i.test(u)){say('「https://」で始まるリンクを貼ってください。');return}
+  var o=fromUrl(u),ok=push(o);save();render();$('lk').value='';
+  say(ok?(o.lat!=null?'追加しました。地図タブで確認できます。':(o.memo?'リンクを保存しました。「リスト」の編集で店名を入れると、地図に載ります。':'追加しました。地図の位置を自動で調べます...')):'すでに追加されています。');if(ok)runGeo();
+};
+var geoBusy=false;
+async function runGeo(){
+  if(geoBusy)return;
+  var T=P.filter(function(p){return p.lat==null&&p.memo!=='名前と場所を後で入力'}),ok=0;
+  if(!T.length){$('geost').textContent='地図に載っていない場所はありません。';return}
+  geoBusy=true;
+  for(var i=0;i<T.length;i++){
+    $('geost').textContent='地図の位置を検索中 '+(i+1)+'/'+T.length+' ...';
+    try{var r=await geocode((T[i].name+' '+T[i].addr).trim());if(r[0]){T[i].lat=+r[0].lat;T[i].lng=+r[0].lon;if(!T[i].addr)T[i].addr=r[0].display_name;ok++}}catch(e){}
+    save();render();
+    await new Promise(function(res){setTimeout(res,1100)});
+  }
+  geoBusy=false;
+  var m=ok+'/'+T.length+'件を地図に載せました。'+(ok<T.length?'見つからなかった場所は、リストの「編集」で名前や住所を直してください。':'');
+  $('geost').textContent=m;say(m);
+}
+$('geoall').onclick=runGeo;
+
+/* --- OCR (Tesseract.js) --- */
+$('img').onchange=function(e){
+  var f=e.target.files[0];if(!f)return;
+  if(typeof Tesseract==='undefined'){$('ocrst').textContent='OCRを読み込めませんでした。通信環境を確認してください。';return}
+  $('ocrst').textContent='読み取り中...(初回は言語データの読み込みで時間がかかります)';
+  Tesseract.recognize(f,'jpn+eng',{logger:function(m){if(m.status==='recognizing text')$('ocrst').textContent='読み取り中 '+Math.round(m.progress*100)+'%'}}).then(function(r){
+    var t=r.data.text.replace(/([^\x00-\x7f])[ \t]+(?=[^\x00-\x7f])/g,'$1').split(/\n/).map(function(l){return l.trim()}).filter(Boolean).join('\n');
+    $('paste').value=($('paste').value?$('paste').value+'\n':'')+t;
+    $('bulk').open=true;$('ocrst').textContent='完了。④の入力欄で、店名の行だけ残して「追加」を押してください。';
+    window.scrollTo(0,0);
+  }).catch(function(){$('ocrst').textContent='読み取りに失敗しました。'});
+};
+
+/* --- file download --- */
+$('dl').onclick=function(){
+  if(!$('ex').value){say('先にCSV・KML・JSONのどれかを選んでください。');return}
+  var ext=/^\s*\[/.test($('ex').value)?'json':/^<\?xml/.test($('ex').value)?'kml':'csv';
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([$('ex').value],{type:'text/plain;charset=utf-8'}));a.download='ikitai.'+ext;document.body.appendChild(a);a.click();a.remove();
+};
+
+/* --- tabs --- */
+document.querySelectorAll('nav button').forEach(function(b){b.onclick=function(){
+  document.querySelectorAll('nav button,section').forEach(function(e){e.classList.remove('on')});
+  b.classList.add('on');$('s-'+b.dataset.t).classList.add('on');window.scrollTo(0,0);if(b.dataset.t==='map'){drawMap();setTimeout(function(){map&&map.invalidateSize()},80)}
+}});
+render();
+})();
+</script>
+</body>
+</html>
